@@ -42,7 +42,7 @@ main :: proc() {
 			engine.make_quit()
 		}
 
-		engine.render_clear(engine.Color{25, 25, 25, 255})
+		engine.render_clear(engine.Color{35, 35, 35, 255})
 		engine.draw_fps()
 
 		// handle particles 

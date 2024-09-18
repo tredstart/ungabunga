@@ -218,7 +218,7 @@ get_mouse_global_position :: proc() -> (i32, i32) {
 }
 
 draw_rect_filled :: proc(rect: Rect, c: Color) {
-	sdl.SetRenderDrawColor(APP.renderer, c.r, c.g, c.g, c.a)
+	sdl.SetRenderDrawColor(APP.renderer, c.r, c.g, c.b, c.a)
 	sdl.RenderFillRect(
 		APP.renderer,
 		&sdl.Rect{x = scaled(rect.x), y = scaled(rect.y), w = scaled(rect.w), h = scaled(rect.h)},
