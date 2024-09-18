@@ -24,6 +24,7 @@ SdlApp :: struct #packed {
 	should_quit:        bool,
 	font:               ^ttf.Font,
 	current_fps:        u32,
+	target_fps:         u32,
 }
 
 @(private)
@@ -88,8 +89,15 @@ begin :: proc() {
 
 end :: proc() {
 	sdl.RenderPresent(APP.renderer)
+	if APP.target_fps > 0 {
+		sdl.Delay(1000 / APP.target_fps)
+	}
 	mem.zero(&INPUT.kb_down[0], sdl.NUM_SCANCODES)
 	mem.zero(&INPUT.mb_down[0], 3)
+}
+
+set_target_fps :: proc(fps: u32) {
+	APP.target_fps = fps
 }
 
 draw_fps :: proc() {

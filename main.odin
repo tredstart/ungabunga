@@ -31,6 +31,7 @@ main :: proc() {
 	id := 0
 
 	spawn_pos := engine.Vector2{}
+	engine.set_target_fps(60)
 
 	for !engine.window_should_close() {
 		dt := engine.get_frame_time()
@@ -41,7 +42,7 @@ main :: proc() {
 			engine.make_quit()
 		}
 
-		engine.render_clear(engine.Color{15, 15, 15, 255})
+		engine.render_clear(engine.Color{25, 25, 25, 255})
 		engine.draw_fps()
 
 		// handle particles 
@@ -70,7 +71,7 @@ main :: proc() {
 			if particle.active {
 				p.move_particle(&particle, dt)
 				engine.draw_rect_filled(
-					engine.Rect{particle.pos.x, particle.pos.y, 20, 20},
+					engine.Rect{particle.pos.x, particle.pos.y, 5, 5},
 					engine.Color{particle.r, particle.g, particle.b, particle.a},
 				)
 			}
