@@ -3,6 +3,7 @@ package engine
 import "core:fmt"
 import "core:log"
 import "core:mem"
+import "core:strings"
 import sdl "vendor:sdl2"
 import ttf "vendor:sdl2/ttf"
 
@@ -21,6 +22,8 @@ SdlApp :: struct #packed {
 	event:              sdl.Event,
 	fps:                u32,
 	should_quit:        bool,
+	font:               ^ttf.Font,
+	current_fps:        u32,
 }
 
 @(private)
@@ -67,12 +70,14 @@ sdl_quit :: proc() {
 get_frame_time :: proc() -> f64 {
 	return f64(APP.current_frame_time - APP.last_frame_time) / 1000.0
 }
-
+/*
+Events, rendering etc should go only after this proc
+ */
 begin :: proc() {
 	APP.last_frame_time = APP.current_frame_time
 	APP.current_frame_time = sdl.GetTicks()
 	if APP.current_frame_time - APP.frame_start >= 1000 {
-		fps_text := fmt.tprintf("%d", APP.fps)
+		APP.current_fps = APP.fps
 		APP.fps = 0
 		APP.frame_start = APP.current_frame_time
 	} else {
@@ -88,7 +93,26 @@ end :: proc() {
 }
 
 draw_fps :: proc() {
+	if APP.font == nil {
+		log.error("cannot draw text: no font selected")
+		return
+	}
+	fps_display := strings.clone_to_cstring(fmt.tprintf("%d", APP.current_fps))
+	defer delete(fps_display)
+	text_surface := ttf.RenderText_Solid(APP.font, fps_display, PURE_WHITE)
+	if text_surface == nil {
+		log.errorf("Surface creation error: %s", sdl.GetError())
+	}
+	defer sdl.FreeSurface(text_surface)
 
+	texture := sdl.CreateTextureFromSurface(APP.renderer, text_surface)
+	if texture == nil {
+		log.errorf("Texture creating error: %s", sdl.GetError())
+	}
+	defer sdl.DestroyTexture(texture)
+
+	fps_dest := sdl.Rect{50, 50, text_surface.w, text_surface.h}
+	sdl.RenderCopy(APP.renderer, texture, nil, &fps_dest)
 }
 
 
@@ -115,6 +139,12 @@ mouse_button_down :: proc(mb: MOUSE_BUTTONS) -> bool {
 }
 mouse_button_pressed :: proc(mb: MOUSE_BUTTONS) -> bool {
 	return INPUT.mb_being_pressed[mb]
+}
+key_button_down :: proc(kb: sdl.Scancode) -> bool {
+	return INPUT.kb_down[kb]
+}
+key_button_pressed :: proc(kb: sdl.Scancode) -> bool {
+	return INPUT.kb_being_pressed[kb]
 }
 
 poll_events :: proc() {
@@ -187,5 +217,23 @@ draw_rect_filled :: proc(rect: Rect, c: Color) {
 	)
 }
 
-ttf_init :: proc() {}
-ttf_quit :: proc() {}
+make_quit :: proc() {
+	APP.should_quit = true
+}
+
+ttf_init :: proc() -> bool {
+	if ttf.Init() != 0 {
+		log.error("can't init ttf")
+		return false
+	}
+	APP.font = ttf.OpenFont("./gohu/Gohu/GohuFontuni11NerdFont-Regular.ttf", 240)
+	if APP.font == nil {
+		log.error("cannot load font")
+		return false
+	}
+	return true
+}
+ttf_quit :: proc() {
+	ttf.CloseFont(APP.font)
+	ttf.Quit()
+}

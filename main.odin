@@ -16,15 +16,12 @@ main :: proc() {
 	logger := log.create_console_logger()
 	context.logger = logger
 	defer log.destroy_console_logger(logger)
-
-	rand.reset(69420)
-
-	if ttf.Init() != 0 {
-		log.error("can't init ttf")
+	if !engine.ttf_init() {
 		return
 	}
-	defer ttf.Quit()
+	defer engine.ttf_quit()
 
+	rand.reset(69420)
 
 	engine.sdl_init("Unga bunga", 1080, 720)
 	defer engine.sdl_quit()
@@ -33,46 +30,21 @@ main :: proc() {
 	active_particles := 0
 	id := 0
 
-	should_quit := false
-
-
-	current_time: u32 = 0
-	last_time: u32 = 0
 	spawn_pos := engine.Vector2{}
-
-	fps := 0
-
-	font := ttf.OpenFont("./gohu/Gohu/GohuFontuni11NerdFont-Regular.ttf", 240)
-	if font == nil {
-		log.error("cannot load font")
-	}
-	defer ttf.CloseFont(font)
 
 	for !engine.window_should_close() {
 		dt := engine.get_frame_time()
 		engine.begin()
 		defer engine.end()
 
+		if engine.key_button_down(.ESCAPE) {
+			engine.make_quit()
+		}
+
 		engine.render_clear(engine.Color{15, 15, 15, 255})
-		// fps_display := strings.clone_to_cstring(fps_text)
-		// defer delete(fps_display)
-		//
-		// text_surface := ttf.RenderText_Solid(font, fps_display, engine.PURE_WHITE)
-		// if text_surface == nil {
-		// 	log.errorf("Surface creation error: %s", sdl.GetError())
-		// }
-		// defer sdl.FreeSurface(text_surface)
-		//
-		// texture := sdl.CreateTextureFromSurface(engine.APP.renderer, text_surface)
-		// if texture == nil {
-		// 	log.errorf("Texture creating error: %s", sdl.GetError())
-		// }
-		// defer sdl.DestroyTexture(texture)
-		//
-		// fps_dest := sdl.Rect{50, 50, text_surface.w, text_surface.h}
+		engine.draw_fps()
 
-
-		// // handle particles 
+		// handle particles 
 		if engine.mouse_button_pressed(.LEFT) && active_particles < engine.MAX_PARTICLES {
 			x, y := engine.get_mouse_global_position()
 			spawn_pos.x = f64(x)
@@ -92,13 +64,6 @@ main :: proc() {
 		}
 
 		if id >= engine.MAX_PARTICLES do id = 0
-
-
-		// hanlde render
-		// Clear the screen
-
-		// sdl.RenderCopy(engine.APP.renderer, texture, nil, &fps_dest)
-
 
 		for &particle in particles {
 			// Set draw color to red
