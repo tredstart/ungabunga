@@ -22,9 +22,9 @@ SdlApp :: struct #packed {
 	event:              sdl.Event,
 	fps:                u32,
 	should_quit:        bool,
-	font:               ^ttf.Font,
 	current_fps:        u32,
 	target_fps:         u32,
+	fonts:              map[string]^ttf.Font,
 }
 
 @(private)
@@ -100,14 +100,15 @@ set_target_fps :: proc(fps: u32) {
 	APP.target_fps = fps
 }
 
-draw_fps :: proc() {
-	if APP.font == nil {
-		log.error("cannot draw text: no font selected")
+draw_text :: proc(x, y: i32, text: string, fs: i32, color: sdl.Color) {
+	font := load_font("./gohu/Gohu/GohuFontuni11NerdFont-Regular.ttf", fs)
+	if font == nil {
+		log.error("cannot draw without loading font")
 		return
 	}
-	fps_display := strings.clone_to_cstring(fmt.tprintf("%d", APP.current_fps))
-	defer delete(fps_display)
-	text_surface := ttf.RenderText_Solid(APP.font, fps_display, PURE_WHITE)
+	text_display := strings.clone_to_cstring(text)
+	defer delete(text_display)
+	text_surface := ttf.RenderText_Solid(font, text_display, color)
 	if text_surface == nil {
 		log.errorf("Surface creation error: %s", sdl.GetError())
 	}
@@ -119,8 +120,13 @@ draw_fps :: proc() {
 	}
 	defer sdl.DestroyTexture(texture)
 
-	fps_dest := sdl.Rect{50, 50, text_surface.w, text_surface.h}
-	sdl.RenderCopy(APP.renderer, texture, nil, &fps_dest)
+	text_dest := sdl.Rect{x, y, text_surface.w, text_surface.h}
+	sdl.RenderCopy(APP.renderer, texture, nil, &text_dest)
+}
+
+draw_fps :: proc() {
+	fps_display := fmt.tprintf("%d", APP.current_fps)
+	draw_text(50, 50, fps_display, scaled(24), PURE_WHITE)
 }
 
 
@@ -142,19 +148,27 @@ INPUT := struct {
 	kb_being_pressed: [sdl.NUM_SCANCODES]bool,
 }{}
 
+/* Should be run between begin() and end() procs */
 mouse_button_down :: proc(mb: MOUSE_BUTTONS) -> bool {
 	return INPUT.mb_down[mb]
 }
+
+/* Should be run between begin() and end() procs */
 mouse_button_pressed :: proc(mb: MOUSE_BUTTONS) -> bool {
 	return INPUT.mb_being_pressed[mb]
 }
+
+/* Should be run between begin() and end() procs */
 key_button_down :: proc(kb: sdl.Scancode) -> bool {
 	return INPUT.kb_down[kb]
 }
+
+/* Should be run between begin() and end() procs */
 key_button_pressed :: proc(kb: sdl.Scancode) -> bool {
 	return INPUT.kb_being_pressed[kb]
 }
 
+@(private)
 poll_events :: proc() {
 	for sdl.PollEvent(&APP.event) {
 		#partial switch APP.event.type {
@@ -229,19 +243,36 @@ make_quit :: proc() {
 	APP.should_quit = true
 }
 
+@(private)
+load_font :: proc(name: cstring, fs: i32) -> ^ttf.Font {
+	key := fmt.tprintf("%s+%d", name, fs)
+	font, ok := APP.fonts[key]
+	log.infof("%s, %s", font, ok)
+	if !ok {
+		log.infof("opening new font: %s", key)
+		font = ttf.OpenFont(name, fs)
+		APP.fonts[key] = font
+	}
+	if font == nil {
+		log.error("cannot load font")
+		return nil
+	}
+	return font
+}
+
 ttf_init :: proc() -> bool {
 	if ttf.Init() != 0 {
 		log.error("can't init ttf")
 		return false
 	}
-	APP.font = ttf.OpenFont("./gohu/Gohu/GohuFontuni11NerdFont-Regular.ttf", 240)
-	if APP.font == nil {
-		log.error("cannot load font")
-		return false
-	}
 	return true
 }
 ttf_quit :: proc() {
-	ttf.CloseFont(APP.font)
+	for name, font in APP.fonts {
+		log.infof("Closing font: %s", name)
+		ttf.CloseFont(font)
+	}
+
+	delete(APP.fonts)
 	ttf.Quit()
 }

@@ -28,6 +28,6 @@ deactivate_particle :: proc(self: ^Particle) {
 
 move_particle :: proc(self: ^Particle, dt: f64) {
 	self.vy += 2
-	self.pos.x += self.vx * dt * engine.SCALE
-	self.pos.y += self.vy * dt * engine.SCALE
+	self.pos.x += self.vx * dt
+	self.pos.y += self.vy * dt
 }
