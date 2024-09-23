@@ -9,6 +9,7 @@ import ttf "vendor:sdl2/ttf"
 
 WINDOW_SHOWN :: sdl.WINDOW_SHOWN
 PURE_WHITE :: sdl.Color{255, 255, 255, 255}
+DEBUG_RED :: sdl.Color{255, 0, 0, 255}
 
 SdlApp :: struct #packed {
 	window:             ^sdl.Window,
@@ -247,7 +248,6 @@ make_quit :: proc() {
 load_font :: proc(name: cstring, fs: i32) -> ^ttf.Font {
 	key := fmt.tprintf("%s+%d", name, fs)
 	font, ok := APP.fonts[key]
-	log.infof("%s, %s", font, ok)
 	if !ok {
 		log.infof("opening new font: %s", key)
 		font = ttf.OpenFont(name, fs)
