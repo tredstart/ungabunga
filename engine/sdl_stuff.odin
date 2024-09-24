@@ -10,6 +10,7 @@ import ttf "vendor:sdl2/ttf"
 WINDOW_SHOWN :: sdl.WINDOW_SHOWN
 PURE_WHITE :: sdl.Color{255, 255, 255, 255}
 DEBUG_RED :: sdl.Color{255, 0, 0, 255}
+SELECTION_BLUE :: sdl.Color{0, 100, 150, 100}
 
 SdlApp :: struct #packed {
 	window:             ^sdl.Window,
@@ -31,7 +32,11 @@ SdlApp :: struct #packed {
 @(private)
 APP := SdlApp{}
 
-sdl_init :: proc(title: cstring, w, h: i32, flags: sdl.WindowFlags = WINDOW_SHOWN) -> bool {
+sdl_init :: proc(
+	title: cstring,
+	w, h: i32,
+	flags: sdl.WindowFlags = WINDOW_SHOWN,
+) -> bool {
 	APP.title = title
 	APP.w = w
 	APP.h = h
@@ -236,7 +241,12 @@ draw_rect_filled :: proc(rect: Rect, c: Color) {
 	sdl.SetRenderDrawColor(APP.renderer, c.r, c.g, c.b, c.a)
 	sdl.RenderFillRect(
 		APP.renderer,
-		&sdl.Rect{x = scaled(rect.x), y = scaled(rect.y), w = scaled(rect.w), h = scaled(rect.h)},
+		&sdl.Rect {
+			x = scaled(rect.x),
+			y = scaled(rect.y),
+			w = scaled(rect.w),
+			h = scaled(rect.h),
+		},
 	)
 }
 

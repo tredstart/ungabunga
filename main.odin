@@ -16,6 +16,22 @@ StateMachine :: enum {
 
 state: StateMachine = .Draw
 
+
+Selection :: struct {
+	x: [2]i32,
+	y: [2]i32,
+}
+
+transmute_selection :: proc(vtx: Selection) -> engine.Rect {
+	start_x, end_x, start_y, end_y := vtx.x[0], vtx.x[1], vtx.y[0], vtx.y[1]
+	return engine.Rect {
+		f64(start_x),
+		f64(start_y),
+		f64(end_x - start_x),
+		f64(end_y - start_y),
+	}
+}
+
 main :: proc() {
 
 	logger := log.create_console_logger()
@@ -94,11 +110,16 @@ main :: proc() {
 	particles: [dynamic]p.Particle
 	defer delete(particles)
 
+	selection_rect := Selection{}
+	selection_active := false
+
 	for !engine.window_should_close() {
 		free_all(context.temp_allocator)
 		dt := engine.get_frame_time()
 		engine.begin()
 		defer engine.end()
+		engine.render_clear(engine.Color{35, 35, 35, 255})
+		engine.draw_fps()
 
 		if engine.key_button_down(.ESCAPE) {
 			engine.make_quit()
@@ -121,10 +142,27 @@ main :: proc() {
 					},
 				)
 			}
+		} else if state == .Select {
+			if engine.mouse_button_pressed(.LEFT) {
+				x, y := engine.get_mouse_global_position()
+				if selection_active {
+					selection_rect.x[1] = x
+					selection_rect.y[1] = y
+				} else {
+					selection_rect.x[0] = x
+					selection_rect.y[0] = y
+					selection_active = true
+				}
+			} else {
+				selection_active = false
+				selection_rect.x = 0
+				selection_rect.y = 0
+			}
+			rect := transmute_selection(selection_rect)
+			// TODO: fix bs with misclicks and stuff
+			engine.draw_rect_filled(rect, engine.SELECTION_BLUE)
 		}
 
-		engine.render_clear(engine.Color{35, 35, 35, 255})
-		engine.draw_fps()
 		for particle in particles {
 			engine.draw_rect_filled(
 				{particle.pos.x, particle.pos.y, 10, 10},
