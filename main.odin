@@ -8,7 +8,13 @@ import "engine"
 import ui "engine/ui"
 import p "particles"
 
-state := false
+StateMachine :: enum {
+	Draw,
+	Play,
+	Select,
+}
+
+state: StateMachine = .Draw
 
 main :: proc() {
 
@@ -39,12 +45,54 @@ main :: proc() {
 		bg   = engine.DEBUG_RED,
 	}
 	play_button.callback = proc() {
-		log.info("fuck yeah")
-		state = !state
-		log.info(state)
+		switch state {
+		case .Draw:
+			fallthrough
+		case .Select:
+			state = .Play
+		case .Play:
+			state = .Draw
+		}
 	}
-	append(&main_window_ui.buttons, play_button)
+	draw_button := ui.Button {
+		text = "D",
+		fs   = engine.scaled(16),
+		w    = 17,
+		h    = 17,
+		x    = 480,
+		y    = 10,
+		fg   = engine.PURE_WHITE,
+		bg   = engine.DEBUG_RED,
+	}
+	draw_button.callback = proc() {
+		switch state {
+		case .Draw:
+		case .Select:
+			state = .Draw
+		case .Play:
+		}
+	}
+	select_button := ui.Button {
+		text = "S",
+		fs   = engine.scaled(16),
+		w    = 17,
+		h    = 17,
+		x    = 500,
+		y    = 10,
+		fg   = engine.PURE_WHITE,
+		bg   = engine.DEBUG_RED,
+	}
+	select_button.callback = proc() {
+		switch state {
+		case .Play:
+		case .Select:
+		case .Draw:
+			state = .Select
+		}
+	}
+	append(&main_window_ui.buttons, play_button, select_button, draw_button)
 	particles: [dynamic]p.Particle
+	defer delete(particles)
 
 	for !engine.window_should_close() {
 		free_all(context.temp_allocator)
@@ -55,11 +103,11 @@ main :: proc() {
 		if engine.key_button_down(.ESCAPE) {
 			engine.make_quit()
 		}
-		if state {
+		if state == .Play {
 			for &particle in particles {
 				p.move_particle(&particle, dt)
 			}
-		} else {
+		} else if state == .Draw {
 			if engine.mouse_button_pressed(.LEFT) {
 				x, y := engine.get_mouse_global_position()
 				append(
