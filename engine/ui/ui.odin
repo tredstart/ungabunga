@@ -1,24 +1,25 @@
 package ui
 
-import ".."
+import rl "vendor:raylib"
 
 Button :: struct {
-	text:     string,
+	text:     cstring,
 	fs:       i32,
-	w, h:     f64,
-	x, y:     f64,
-	fg:       engine.Color,
-	bg:       engine.Color,
+	w, h:     f32,
+	pos:      rl.Vector2,
+	x, y:     i32,
+	fg:       rl.Color,
+	bg:       rl.Color,
 	callback: proc(),
 }
 
 on_click :: proc(button: Button) {
-	if engine.mouse_button_down(.LEFT) {
-		x, y := engine.get_mouse_global_position()
-		if f64(x) >= button.x &&
-		   button.x + button.w >= f64(x) &&
-		   f64(y) >= button.y &&
-		   button.y + button.h >= f64(y) {
+	if rl.IsMouseButtonDown(.LEFT) {
+		pos := rl.GetMousePosition()
+		if pos.x >= button.pos.x &&
+		   button.pos.x + button.w >= pos.x &&
+		   pos.y >= button.pos.y &&
+		   button.pos.y + button.h >= pos.y {
 			button.callback()
 		}
 	}
@@ -26,14 +27,11 @@ on_click :: proc(button: Button) {
 
 @(private)
 render_button :: proc(button: Button) {
-	engine.draw_rect_filled({button.x, button.y, button.w, button.h}, button.bg)
-	engine.draw_text(
-		engine.scaled(button.x),
-		engine.scaled(button.y),
-		button.text,
-		button.fs,
-		button.fg,
+	rl.DrawRectangleRec(
+		{button.pos.x, button.pos.y, button.w, button.h},
+		button.bg,
 	)
+	rl.DrawText(button.text, button.x, button.y, button.fs, button.fg)
 }
 
 UI :: struct {
