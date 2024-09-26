@@ -47,6 +47,12 @@ dim_to_pos :: proc(row, col: i32) -> rl.Vector2 {
 	return rl.Vector2{px, py}
 }
 
+free_particles :: proc(particles: []^p.Particle) {
+	for particle in particles {
+		free(particle)
+	}
+}
+
 main :: proc() {
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
@@ -94,11 +100,7 @@ main :: proc() {
 	dim_x, dim_y := window_width / CELL_SIZE, window_height / CELL_SIZE
 
 	canvas := make([]^p.Particle, dim_x * dim_y)
-	defer {
-		for particle in canvas {
-			free(particle)
-		}
-	}
+	defer free_particles(canvas)
 	defer delete(canvas)
 
 	main_window_ui := ui.UI{}
@@ -108,12 +110,31 @@ main :: proc() {
 		fs   = 16,
 		w    = 17,
 		h    = 17,
-		x    = 450,
+		x    = 440,
 		y    = 10,
 		fg   = rl.RAYWHITE,
 		bg   = rl.RED,
 	}
 	play_button.pos = {f32(play_button.x - 3), f32(play_button.y)}
+	pause_button := ui.Button {
+		text = "||",
+		fs   = 16,
+		w    = 17,
+		h    = 17,
+		x    = 460,
+		y    = 10,
+		fg   = rl.RAYWHITE,
+		bg   = rl.RED,
+	}
+	pause_button.pos = {f32(pause_button.x - 3), f32(pause_button.y)}
+	pause_button.callback = proc() {
+		switch state {
+		case .Draw:
+		case .Select:
+		case .Play:
+			state = .Draw
+		}
+	}
 	play_button.callback = proc() {
 		switch state {
 		case .Draw:
@@ -121,7 +142,6 @@ main :: proc() {
 		case .Select:
 			state = .Play
 		case .Play:
-			state = .Draw
 		}
 	}
 	draw_button := ui.Button {
@@ -162,20 +182,47 @@ main :: proc() {
 			state = .Select
 		}
 	}
-	append(&main_window_ui.buttons, play_button, select_button, draw_button)
+	append(
+		&main_window_ui.buttons,
+		play_button,
+		select_button,
+		draw_button,
+		pause_button,
+	)
 	selection_rect := Selection{}
 	selection_active := false
+	saved := false
+
+	particles := [dynamic]^p.Particle{}
+	defer delete(particles)
 
 	for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
 		dt := rl.GetFrameTime()
 
 		if state == .Play {
-			// for &particle in particles {
-			// 	p.move_particle(&particle, dt)
-			// }
+			if !saved {
+				for particle in canvas {
+					if particle != nil {
+						pp := new(p.Particle)
+						pp^ = particle^
+						append(&particles, pp)
+					}
+				}
+				saved = true
+			}
+			for particle in particles {
+				p.move_particle(particle, dt)
+			}
 		} else if state == .Draw {
+			if saved {
+				for len(particles) > 0 {
+					pp := pop(&particles)
+					free(pp)
+				}
+			}
 			if rl.IsMouseButtonDown(.LEFT) {
+				saved = false
 				pos := rl.GetMousePosition()
 				row, col := snap_to_grid(pos.x, pos.y)
 				id := index(row, col, dim_x)
@@ -220,8 +267,17 @@ main :: proc() {
 		defer rl.DrawFPS(10, 10)
 		rl.ClearBackground(rl.RAYWHITE)
 
-		for particle in canvas {
-			if particle != nil {
+		if state == .Draw || state == .Select {
+			for particle in canvas {
+				if particle != nil {
+					rl.DrawRectangleRec(
+						{particle.pos.x, particle.pos.y, CELL_SIZE, CELL_SIZE},
+						{particle.r, particle.g, particle.b, particle.a},
+					)
+				}
+			}
+		} else if state == .Play {
+			for particle in particles {
 				rl.DrawRectangleRec(
 					{particle.pos.x, particle.pos.y, CELL_SIZE, CELL_SIZE},
 					{particle.r, particle.g, particle.b, particle.a},
