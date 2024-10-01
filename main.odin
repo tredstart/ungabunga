@@ -1,5 +1,6 @@
 package main
 
+import "core:log"
 import "core:math"
 import ub "particles"
 import rl "vendor:raylib"
@@ -8,7 +9,7 @@ VIEWPORT_WIDTH :: 0.7
 VIEWPORT_HEIGHT :: 0.7
 
 VIEWPORTX :: 0.15
-VIEWPORTY :: 30
+VIEWPORTY :: 0.03
 
 CELL_SIZE :: 10
 
@@ -19,10 +20,9 @@ index :: proc(row, col, w: i32) -> i32 {
 get_viewport_size :: proc(w, h: i32) -> (f32, f32) {
 	return f32(w) * VIEWPORT_WIDTH, f32(h) * VIEWPORT_HEIGHT
 }
-snap_to_grid :: proc(x, y: f32) -> (i32, i32) {
-	col := cast(i32)math.round(x / CELL_SIZE)
-	row := cast(i32)math.round(y / CELL_SIZE)
-	return row, col
+snap_to_grid :: proc(pos: rl.Vector2) -> (i32, i32) {
+	return cast(i32)math.round(pos.x / CELL_SIZE),
+		cast(i32)math.round(pos.y / CELL_SIZE)
 }
 
 dim_to_pos :: proc(row, col: i32) -> rl.Vector2 {
@@ -32,14 +32,17 @@ dim_to_pos :: proc(row, col: i32) -> rl.Vector2 {
 }
 
 Canvas :: struct {
-	panel:     rl.Rectangle,
-	particles: []ub.Particle,
-	camera:    rl.Camera2D,
+	panel:            rl.Rectangle,
+	particles:        []ub.Particle,
+	camera:           rl.Camera2D,
+	canvasw, canvash: i32,
+	current_color:    rl.Color,
 }
 Frame :: struct {}
 
 draw_canvas :: proc(canvas: ^Canvas) {
-	rl.DrawRectangleRec(canvas.panel, rl.LIGHTGRAY)
+
+	rl.DrawRectangleRec(canvas.panel, rl.BLACK)
 	rl.BeginScissorMode(
 		i32(canvas.panel.x),
 		i32(canvas.panel.y),
@@ -51,11 +54,8 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	defer rl.EndScissorMode()
 
 	wheel := rl.GetMouseWheelMove()
+	mouse_world := rl.GetScreenToWorld2D(rl.GetMousePosition(), canvas.camera)
 	if wheel != 0 {
-		mouse_world := rl.GetScreenToWorld2D(
-			rl.GetMousePosition(),
-			canvas.camera,
-		)
 		canvas.camera.offset = rl.GetMousePosition()
 		canvas.camera.target = mouse_world
 
@@ -70,58 +70,100 @@ draw_canvas :: proc(canvas: ^Canvas) {
 		)
 	}
 
+	if rl.IsMouseButtonDown(.LEFT) {
+		col, row := snap_to_grid(mouse_world * canvas.camera.zoom)
+		log.info(row, col)
+		id := index(col, row, canvas.canvasw)
+		if id >= 0 && int(id) < len(canvas.particles) {
+			prev := canvas.particles[id]
+			pp_pos := dim_to_pos(row, col)
+			pp := ub.Particle {
+				pos   = pp_pos - canvas.camera.offset,
+				color = canvas.current_color,
+			}
+			canvas.particles[id] = pp
+		}
+	}
+
 	if rl.IsMouseButtonDown(.RIGHT) {
 		delta := rl.GetMouseDelta()
 		delta = delta * (-1.0 / canvas.camera.zoom)
 		canvas.camera.target = canvas.camera.target + delta
 	}
 
+
 	for particle in canvas.particles {
 		rl.DrawRectangle(
-			i32(particle.pos.x + canvas.panel.x),
-			i32(particle.pos.y + canvas.panel.y),
+			i32(particle.pos.x),
+			i32(particle.pos.y),
 			CELL_SIZE,
 			CELL_SIZE,
-			{particle.r, particle.g, particle.b, particle.a},
+			particle.color,
 		)
 	}
+	rl.DrawRectangleRec({width = 15, height = 15}, rl.RED)
+	rl.DrawLine(
+		i32(canvas.camera.target.x),
+		-i32(canvas.panel.height) * 10,
+		i32(canvas.camera.target.x),
+		i32(canvas.panel.height) * 10,
+		rl.GREEN,
+	)
+	rl.DrawLine(
+		-i32(canvas.panel.width) * 10,
+		i32(canvas.camera.target.y),
+		i32(canvas.panel.width) * 10,
+		i32(canvas.camera.target.y),
+		rl.GREEN,
+	)
 }
 
 main :: proc() {
+	logger := log.create_console_logger()
+	context.logger = logger
+	defer log.destroy_console_logger(logger)
 
 	rl.InitWindow(1920, 1000, "Unga bunga")
 	defer rl.CloseWindow()
 	rl.SetWindowState({.WINDOW_RESIZABLE})
 
-	canvasw, canvash: i32 = 64, 64
 	window_width := rl.GetScreenWidth()
 	window_height := rl.GetScreenHeight()
+	log.info(window_width, window_height)
 	vpsw, vpsh := get_viewport_size(window_width, window_height)
+	log.info(vpsw, vpsh)
+	vpx := VIEWPORTX * f32(window_width)
+	vpy := VIEWPORTY * f32(window_height)
 
 	canvas := Canvas {
-		panel     = {VIEWPORTX * f32(window_width), VIEWPORTY, vpsw, vpsh},
-		particles = make([]ub.Particle, canvasw * canvash),
+		panel         = {vpx, vpy, vpsw, vpsh},
+		canvash       = 10,
+		canvasw       = 10,
+		current_color = rl.RED,
 	}
-	canvas.camera.zoom = 1
-	canvas.camera.offset = {
-		canvas.panel.x + f32(canvasw) / 2,
-		canvas.panel.y + f32(canvash) / 2,
-	}
+	canvas.particles = make([]ub.Particle, canvas.canvasw * canvas.canvash)
+	defer delete(canvas.particles)
 
-	for i in 0 ..< canvash {
-		for j in 0 ..< canvasw {
-			canvas.particles[index(i, j, canvasw)] = {
-				pos = {f32(CELL_SIZE * j), f32(CELL_SIZE * i)},
-				r   = 244,
-				g   = 244,
-				b   = 244,
-				a   = 255,
+	canvas.camera.zoom = 1
+
+	canvas.camera.target = {
+		f32(canvas.canvasw * CELL_SIZE) / 2,
+		f32(canvas.canvash * CELL_SIZE) / 2,
+	}
+	log.info(canvas.camera.target)
+
+	canvas.camera.offset = {f32(window_width) / 2, f32(window_height) / 2}
+	log.info(canvas.camera.offset)
+
+	for i in 0 ..< canvas.canvash {
+		for j in 0 ..< canvas.canvasw {
+			canvas.particles[index(i, j, canvas.canvasw)] = {
+				pos   = {f32(CELL_SIZE * j), f32(CELL_SIZE * i)},
+				color = {244, 244, 244, 255},
 			}
 		}
 	}
-	defer delete(canvas.particles)
 
-	current_color: rl.Color
 
 	for !rl.WindowShouldClose() {
 
