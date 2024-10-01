@@ -42,7 +42,7 @@ Frame :: struct {}
 
 draw_canvas :: proc(canvas: ^Canvas) {
 
-	rl.DrawRectangleRec(canvas.panel, rl.BLACK)
+	rl.DrawRectangleRec(canvas.panel, rl.DARKGRAY)
 	rl.BeginScissorMode(
 		i32(canvas.panel.x),
 		i32(canvas.panel.y),
@@ -71,14 +71,18 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	}
 
 	if rl.IsMouseButtonDown(.LEFT) {
-		col, row := snap_to_grid(mouse_world * canvas.camera.zoom)
+		row, col := snap_to_grid(mouse_world)
 		log.info(row, col)
-		id := index(col, row, canvas.canvasw)
-		if id >= 0 && int(id) < len(canvas.particles) {
+		if row >= 0 &&
+		   col >= 0 &&
+		   row < canvas.canvash &&
+		   col < canvas.canvasw {
+			id := index(col, row, canvas.canvasw)
+			log.info(id)
 			prev := canvas.particles[id]
-			pp_pos := dim_to_pos(row, col)
+			pp_pos := dim_to_pos(col, row)
 			pp := ub.Particle {
-				pos   = pp_pos - canvas.camera.offset,
+				pos   = pp_pos,
 				color = canvas.current_color,
 			}
 			canvas.particles[id] = pp
@@ -101,7 +105,7 @@ draw_canvas :: proc(canvas: ^Canvas) {
 			particle.color,
 		)
 	}
-	rl.DrawRectangleRec({width = 15, height = 15}, rl.RED)
+	rl.DrawRectangleV(mouse_world, {10, 10}, rl.RED)
 	rl.DrawLine(
 		i32(canvas.camera.target.x),
 		-i32(canvas.panel.height) * 10,
@@ -137,8 +141,8 @@ main :: proc() {
 
 	canvas := Canvas {
 		panel         = {vpx, vpy, vpsw, vpsh},
-		canvash       = 10,
-		canvasw       = 10,
+		canvash       = 100,
+		canvasw       = 100,
 		current_color = rl.RED,
 	}
 	canvas.particles = make([]ub.Particle, canvas.canvasw * canvas.canvash)
