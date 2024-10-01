@@ -70,6 +70,12 @@ draw_canvas :: proc(canvas: ^Canvas) {
 		)
 	}
 
+	if rl.IsMouseButtonDown(.RIGHT) {
+		delta := rl.GetMouseDelta()
+		delta = delta * (-1.0 / canvas.camera.zoom)
+		canvas.camera.target = canvas.camera.target + delta
+	}
+
 	for particle in canvas.particles {
 		rl.DrawRectangle(
 			i32(particle.pos.x + canvas.panel.x),
@@ -97,6 +103,10 @@ main :: proc() {
 		particles = make([]ub.Particle, canvasw * canvash),
 	}
 	canvas.camera.zoom = 1
+	canvas.camera.offset = {
+		canvas.panel.x + f32(canvasw) / 2,
+		canvas.panel.y + f32(canvash) / 2,
+	}
 
 	for i in 0 ..< canvash {
 		for j in 0 ..< canvasw {
