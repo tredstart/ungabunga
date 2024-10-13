@@ -6,14 +6,60 @@ import rl "vendor:raylib"
 
 Canvas :: struct {
 	panel:            rl.Rectangle,
-	particles:        []ub.Particle,
 	camera:           rl.Camera2D,
-	canvasw, canvash: i32,
 	current_color:    rl.Color,
 	last_placed:      rl.Vector2,
 	drawing:          bool,
+	layers:           [dynamic]Layer,
+	active_layer:     uint,
+	canvasw, canvash: i32,
 }
+
 Frame :: struct {}
+
+init_canvas :: proc(cw, ch: i32) -> ^Canvas {
+	canvas := new(Canvas)
+	append(&canvas.layers, Layer{})
+	assert(len(canvas.layers) == 1)
+
+	canvas.canvasw = cw
+	canvas.canvash = ch
+
+	canvas.active_layer = 0
+	init_clear_layer(&canvas.layers[0], canvas.canvasw, canvas.canvash)
+
+	canvas.canvasw = cw
+	canvas.canvash = ch
+
+	canvas.active_layer = 0
+	init_clear_layer(&canvas.layers[0], canvas.canvasw, canvas.canvash)
+
+	window_width := rl.GetScreenWidth()
+	window_height := rl.GetScreenHeight()
+	log.info(window_width, window_height)
+	vpsw, vpsh := get_viewport_size(window_width, window_height)
+	log.info(vpsw, vpsh)
+	vpx := VIEWPORTX * f32(window_width)
+	vpy := VIEWPORTY * f32(window_height)
+
+	canvas.panel = {vpx, vpy, vpsw, vpsh}
+	canvas.current_color = rl.RED
+
+	canvas.camera.zoom = 1
+	canvas.camera.target = {f32(canvas.canvasw * CELL_SIZE) / 2, f32(canvas.canvash * CELL_SIZE) / 2}
+	canvas.camera.offset = {f32(window_width) / 2, f32(window_height) / 2}
+
+	return canvas
+}
+
+delete_canvas :: proc(canvas: ^Canvas) {
+	for &layer in canvas.layers {
+		delete_layer(&layer)
+	}
+	delete(canvas.layers)
+	free(canvas)
+}
+
 handle_zoom :: proc(canvas: ^Canvas, mouse_world: rl.Vector2, wheel: f32) {
 	if wheel != 0 {
 		canvas.camera.offset = rl.GetMousePosition()
@@ -23,98 +69,30 @@ handle_zoom :: proc(canvas: ^Canvas, mouse_world: rl.Vector2, wheel: f32) {
 		if wheel < 0 {
 			scale_factor = 1 / scale_factor
 		}
-		canvas.camera.zoom = clamp(
-			canvas.camera.zoom * scale_factor,
-			0.125,
-			64.0,
-		)
-	}
-}
-
-plot :: proc(canvas: ^Canvas, pos: rl.Vector2) {
-	row, col := snap_to_grid(pos)
-	if row >= 0 && col >= 0 && row < canvas.canvash && col < canvas.canvasw {
-		id := index(col, row, canvas.canvasw)
-		pp_pos := dim_to_pos(col, row)
-		pp := ub.Particle {
-			pos   = pp_pos,
-			color = canvas.current_color,
-		}
-		canvas.particles[id] = pp
-	}
-}
-
-
-plot_line_high :: proc(canvas: ^Canvas, pos0, pos1: rl.Vector2) {
-	dx := pos1.x - pos0.x
-	dy := pos1.y - pos0.y
-
-	xi := 1
-
-	if dx < 0 {
-		xi = -1
-		dx = -dx
-	}
-
-	D := (2 * dx) - dy
-	x := pos0.x
-
-	for y in pos0.y ..= pos1.y {
-		plot(canvas, {x, y})
-		if D > 0 {
-			x = x + f32(xi)
-			D = D + (2 * (dx - dy))
-		} else {
-			D = D + 2 * dx
-		}
-	}
-}
-
-plot_line_low :: proc(canvas: ^Canvas, pos0, pos1: rl.Vector2) {
-	dx := pos1.x - pos0.x
-	dy := pos1.y - pos0.y
-
-	yi := 1
-
-	if dy < 0 {
-		yi = -1
-		dy = -dy
-	}
-
-	D := (2 * dy) - dx
-	y := pos0.y
-
-	for x in pos0.x ..= pos1.x {
-		plot(canvas, {x, y})
-		if D > 0 {
-			y = y + f32(yi)
-			D = D + (2 * (dy - dx))
-		} else {
-			D = D + 2 * dy
-		}
+		canvas.camera.zoom = clamp(canvas.camera.zoom * scale_factor, 0.125, 64.0)
 	}
 }
 
 
 handle_draw :: proc(canvas: ^Canvas, mouse_world: rl.Vector2) {
 	if rl.IsMouseButtonDown(.LEFT) {
+		layer := &canvas.layers[canvas.active_layer]
 		if canvas.drawing {
-			if abs(mouse_world.y - canvas.last_placed.y) <
-			   abs(mouse_world.x - canvas.last_placed.x) {
+			if abs(mouse_world.y - canvas.last_placed.y) < abs(mouse_world.x - canvas.last_placed.x) {
 				if canvas.last_placed.x > mouse_world.x {
-					plot_line_low(canvas, mouse_world, canvas.last_placed)
+					plot_line_low(layer, mouse_world, canvas.last_placed, canvas.current_color)
 				} else {
-					plot_line_low(canvas, canvas.last_placed, mouse_world)
+					plot_line_low(layer, canvas.last_placed, mouse_world, canvas.current_color)
 				}
 			} else {
 				if canvas.last_placed.y > mouse_world.y {
-					plot_line_high(canvas, mouse_world, canvas.last_placed)
+					plot_line_high(layer, mouse_world, canvas.last_placed, canvas.current_color)
 				} else {
-					plot_line_high(canvas, canvas.last_placed, mouse_world)
+					plot_line_high(layer, canvas.last_placed, mouse_world, canvas.current_color)
 				}
 			}
 		} else {
-			plot(canvas, mouse_world)
+			plot(layer, mouse_world, canvas.current_color)
 			canvas.drawing = true
 		}
 		col, row := snap_to_grid(mouse_world)
@@ -135,12 +113,7 @@ handle_canvas_drag :: proc(canvas: ^Canvas) {
 
 draw_canvas :: proc(canvas: ^Canvas) {
 	rl.DrawRectangleRec(canvas.panel, rl.DARKGRAY)
-	rl.BeginScissorMode(
-		i32(canvas.panel.x),
-		i32(canvas.panel.y),
-		i32(canvas.panel.width),
-		i32(canvas.panel.height),
-	)
+	rl.BeginScissorMode(i32(canvas.panel.x), i32(canvas.panel.y), i32(canvas.panel.width), i32(canvas.panel.height))
 	rl.BeginMode2D(canvas.camera)
 	defer rl.EndMode2D()
 	defer rl.EndScissorMode()
@@ -152,14 +125,8 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	handle_draw(canvas, mouse_world)
 	handle_canvas_drag(canvas)
 
-	for particle in canvas.particles {
-		rl.DrawRectangle(
-			i32(particle.pos.x),
-			i32(particle.pos.y),
-			CELL_SIZE,
-			CELL_SIZE,
-			particle.color,
-		)
+	for particle in canvas.layers[canvas.active_layer].particles {
+		rl.DrawRectangle(i32(particle.pos.x), i32(particle.pos.y), CELL_SIZE, CELL_SIZE, particle.color)
 	}
 
 	// TODO: remove this after debugging is finished or set it under debug flag
