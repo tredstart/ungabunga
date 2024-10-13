@@ -65,6 +65,12 @@ main :: proc() {
 			{engine.VIEWPORTX * f32(window_width) + vpsw + 20, 30, 200, 950},
 			"Params",
 		)
+
+		rl.GuiColorPicker(
+			{engine.VIEWPORTX * f32(window_width) + vpsw + 20, 30, 200, 200},
+			"Current color",
+			&canvas.current_color,
+		)
 		engine.draw_canvas(&canvas)
 
 	}
