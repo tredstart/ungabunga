@@ -17,6 +17,13 @@ Canvas :: struct {
 
 Frame :: struct {}
 
+screen_dimentions :: proc() -> (window_width, window_height: i32, vpsw, vpsh: f32) {
+	window_width = rl.GetScreenWidth()
+	window_height = rl.GetScreenHeight()
+	vpsw, vpsh = get_viewport_size(window_width, window_height)
+	return
+}
+
 init_canvas :: proc(cw, ch: i32) -> ^Canvas {
 	canvas := new(Canvas)
 	append(&canvas.layers, Layer{})
@@ -27,18 +34,8 @@ init_canvas :: proc(cw, ch: i32) -> ^Canvas {
 
 	canvas.active_layer = 0
 	init_clear_layer(&canvas.layers[0], canvas.canvasw, canvas.canvash)
+	window_width, window_height, vpsw, vpsh := screen_dimentions()
 
-	canvas.canvasw = cw
-	canvas.canvash = ch
-
-	canvas.active_layer = 0
-	init_clear_layer(&canvas.layers[0], canvas.canvasw, canvas.canvash)
-
-	window_width := rl.GetScreenWidth()
-	window_height := rl.GetScreenHeight()
-	log.info(window_width, window_height)
-	vpsw, vpsh := get_viewport_size(window_width, window_height)
-	log.info(vpsw, vpsh)
 	vpx := VIEWPORTX * f32(window_width)
 	vpy := VIEWPORTY * f32(window_height)
 
@@ -125,6 +122,7 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	handle_draw(canvas, mouse_world)
 	handle_canvas_drag(canvas)
 
+	assert(len(canvas.layers) > 0)
 	for particle in canvas.layers[canvas.active_layer].particles {
 		rl.DrawRectangle(i32(particle.pos.x), i32(particle.pos.y), CELL_SIZE, CELL_SIZE, particle.color)
 	}
