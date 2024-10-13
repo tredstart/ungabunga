@@ -57,6 +57,7 @@ main :: proc() {
 		rl.BeginDrawing()
 		defer rl.EndDrawing()
 		rl.ClearBackground({100, 100, 100, 255})
+		defer rl.DrawFPS(10, 10)
 
 		rl.GuiGroupBox({30, 30, 250, 900}, "Objects")
 		rl.GuiGroupBox({300, 800, 1200, 200}, "Timeline")

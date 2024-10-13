@@ -33,7 +33,7 @@ index :: proc(row, col, w: i32) -> i32 {
 get_viewport_size :: proc(w, h: i32) -> (f32, f32) {
 	return f32(w) * VIEWPORT_WIDTH, f32(h) * VIEWPORT_HEIGHT
 }
-snap_to_grid :: proc(pos: rl.Vector2) -> (i32, i32) {
+snap_to_grid :: proc(pos: rl.Vector2) -> (col: i32, row: i32) {
 	return cast(i32)math.round(pos.x / CELL_SIZE),
 		cast(i32)math.round(pos.y / CELL_SIZE)
 }
