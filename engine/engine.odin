@@ -11,7 +11,7 @@ Canvas :: struct {
 	last_placed:      rl.Vector2,
 	drawing:          bool,
 	layers:           [dynamic]Layer,
-	active_layer:     uint,
+	active_layer:     i32,
 	canvasw, canvash: i32,
 }
 
@@ -127,20 +127,22 @@ draw_canvas :: proc(canvas: ^Canvas) {
 		rl.DrawRectangle(i32(particle.pos.x), i32(particle.pos.y), CELL_SIZE, CELL_SIZE, particle.color)
 	}
 
-	// TODO: remove this after debugging is finished or set it under debug flag
-	rl.DrawRectangleV(mouse_world, {10, 10}, rl.RED)
-	rl.DrawLine(
-		i32(canvas.camera.target.x),
-		-i32(canvas.panel.height) * 10,
-		i32(canvas.camera.target.x),
-		i32(canvas.panel.height) * 10,
-		rl.GREEN,
-	)
-	rl.DrawLine(
-		-i32(canvas.panel.width) * 10,
-		i32(canvas.camera.target.y),
-		i32(canvas.panel.width) * 10,
-		i32(canvas.camera.target.y),
-		rl.GREEN,
-	)
+	when ODIN_DEBUG {
+		// TODO: remove this after debugging is finished or set it under debug flag
+		rl.DrawRectangleV(mouse_world, {10, 10}, rl.RED)
+		rl.DrawLine(
+			i32(canvas.camera.target.x),
+			-i32(canvas.panel.height) * 10,
+			i32(canvas.camera.target.x),
+			i32(canvas.panel.height) * 10,
+			rl.GREEN,
+		)
+		rl.DrawLine(
+			-i32(canvas.panel.width) * 10,
+			i32(canvas.camera.target.y),
+			i32(canvas.panel.width) * 10,
+			i32(canvas.camera.target.y),
+			rl.GREEN,
+		)
+	}
 }

@@ -43,6 +43,17 @@ main :: proc() {
 	canvas := engine.init_canvas(100, 100)
 	defer engine.delete_canvas(canvas)
 
+	window_width, window_height, vpsw, vpsh := engine.screen_dimentions()
+	rside := engine.Panel {
+		panel   = {engine.VIEWPORTX * f32(window_width) + vpsw + 20, 30, 200, 950},
+		padding = {5, 5, 30, 5},
+	}
+
+	lside := engine.Panel {
+		panel   = {30, 30, 250, 900},
+		padding = {5, 5, 30, 5},
+	}
+
 	for !rl.WindowShouldClose() {
 
 		rl.BeginDrawing()
@@ -50,9 +61,9 @@ main :: proc() {
 		rl.ClearBackground({100, 100, 100, 255})
 		defer rl.DrawFPS(10, 10)
 
-		rl.GuiGroupBox({30, 30, 250, 900}, "Objects")
+		engine.draw_lside_panel(canvas, lside)
 		rl.GuiGroupBox({300, 800, 1200, 200}, "Timeline")
-		engine.draw_side_panel(canvas)
+		engine.draw_rside_panel(canvas, rside)
 		engine.draw_canvas(canvas)
 
 	}
