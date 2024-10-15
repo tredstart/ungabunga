@@ -84,57 +84,32 @@ handle_zoom :: proc(canvas: ^Canvas, mouse_world: rl.Vector2, wheel: f32) {
 handle_draw :: proc(canvas: ^Canvas, mouse_world: rl.Vector2) {
 	if rl.IsMouseButtonDown(.LEFT) {
 		layer := &canvas.layers[canvas.active_layer]
-		switch canvas.state {
-		case .Drawing:
-			{
-				if canvas.state_active {
-					if abs(mouse_world.y - canvas.last_placed.y) < abs(mouse_world.x - canvas.last_placed.x) {
-						if canvas.last_placed.x > mouse_world.x {
-							plot_line_low(layer, mouse_world, canvas.last_placed, canvas.current_color)
-						} else {
-							plot_line_low(layer, canvas.last_placed, mouse_world, canvas.current_color)
-						}
-					} else {
-						if canvas.last_placed.y > mouse_world.y {
-							plot_line_high(layer, mouse_world, canvas.last_placed, canvas.current_color)
-						} else {
-							plot_line_high(layer, canvas.last_placed, mouse_world, canvas.current_color)
-						}
-					}
-					if abs(mouse_world.y - canvas.last_placed.y) < abs(mouse_world.x - canvas.last_placed.x) {
-						if canvas.last_placed.x > mouse_world.x {
-							plot_line_low(layer, mouse_world, canvas.last_placed, canvas.current_color)
-						} else {
-							plot_line_low(layer, canvas.last_placed, mouse_world, canvas.current_color)
-						}
-					} else {
-						if canvas.last_placed.y > mouse_world.y {
-							plot_line_high(layer, mouse_world, canvas.last_placed, canvas.current_color)
-						} else {
-							plot_line_high(layer, canvas.last_placed, mouse_world, canvas.current_color)
-						}
-					}
-					col, row := snap_to_grid(mouse_world)
-					canvas.last_placed = dim_to_pos(row, col)
-				} else {
-					plot(layer, mouse_world, canvas.current_color)
-					canvas.state = .Drawing
-					col, row := snap_to_grid(mouse_world)
-					canvas.last_placed = dim_to_pos(row, col)
-				}
-			}
+		fill := canvas.current_color
+		#partial switch canvas.state {
 		case .Erasing:
-			{
-				canvas.state_active = true
-				col, row := snap_to_grid(mouse_world)
-				current_layer := canvas.layers[canvas.active_layer]
-				pixel := &current_layer.particles[index(row, col, canvas.canvasw)]
-				if pixel.color.a != 0 {
-					pixel.color = {0, 0, 0, 0}
-					log.info(pixel)
+			fill = {0, 0, 0, 0}
+		}
+		if canvas.state_active {
+			if abs(mouse_world.y - canvas.last_placed.y) < abs(mouse_world.x - canvas.last_placed.x) {
+				if canvas.last_placed.x > mouse_world.x {
+					plot_line_low(layer, mouse_world, canvas.last_placed, fill)
+				} else {
+					plot_line_low(layer, canvas.last_placed, mouse_world, fill)
+				}
+			} else {
+				if canvas.last_placed.y > mouse_world.y {
+					plot_line_high(layer, mouse_world, canvas.last_placed, fill)
+				} else {
+					plot_line_high(layer, canvas.last_placed, mouse_world, fill)
 				}
 			}
+		} else {
+
+			plot(layer, mouse_world, fill)
+			canvas.state_active = true
 		}
+		col, row := snap_to_grid(mouse_world)
+		canvas.last_placed = dim_to_pos(row, col)
 	}
 	if rl.IsMouseButtonUp(.LEFT) {
 		canvas.state_active = false
