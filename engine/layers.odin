@@ -17,7 +17,7 @@ init_clear_layer :: proc(layer: ^Layer, cw, ch: i32) {
 		for j in 0 ..< cw {
 			layer.particles[index(i, j, cw)] = {
 				pos   = {f32(CELL_SIZE * j), f32(CELL_SIZE * i)},
-				color = {244, 244, 244, 255},
+				color = {0, 0, 0, 0},
 			}
 		}
 	}

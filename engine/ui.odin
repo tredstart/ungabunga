@@ -19,7 +19,7 @@ draw_rside_panel :: proc(canvas: ^Canvas, panel: Panel) {
 	}
 	rside_color_picker.height = rside_color_picker.width
 	rl.GuiGroupBox(panel.panel, "Params")
-	rl.GuiColorPanel(rside_color_picker, "Current color", &canvas.current_color)
+	rl.GuiColorPicker(rside_color_picker, "Current color", &canvas.current_color)
 }
 
 draw_lside_panel :: proc(canvas: ^Canvas, panel: Panel) {

@@ -13,6 +13,7 @@ Canvas :: struct {
 	layers:           [dynamic]Layer,
 	active_layer:     i32,
 	canvasw, canvash: i32,
+	visible:          []ub.Particle,
 }
 
 Frame :: struct {}
@@ -46,6 +47,8 @@ init_canvas :: proc(cw, ch: i32) -> ^Canvas {
 	canvas.camera.target = {f32(canvas.canvasw * CELL_SIZE) / 2, f32(canvas.canvash * CELL_SIZE) / 2}
 	canvas.camera.offset = {f32(window_width) / 2, f32(window_height) / 2}
 
+	canvas.visible = make([]ub.Particle, canvas.canvash * canvas.canvasw)
+
 	return canvas
 }
 
@@ -54,6 +57,7 @@ delete_canvas :: proc(canvas: ^Canvas) {
 		delete_layer(&layer)
 	}
 	delete(canvas.layers)
+	delete(canvas.visible)
 	free(canvas)
 }
 
@@ -115,6 +119,9 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	defer rl.EndMode2D()
 	defer rl.EndScissorMode()
 
+	rl.DrawRectangle(0, 0, canvas.canvasw * CELL_SIZE, canvas.canvash * CELL_SIZE, rl.RAYWHITE)
+
+
 	wheel := rl.GetMouseWheelMove()
 	mouse_world := rl.GetScreenToWorld2D(rl.GetMousePosition(), canvas.camera)
 
@@ -123,12 +130,15 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	handle_canvas_drag(canvas)
 
 	assert(len(canvas.layers) > 0)
-	for particle in canvas.layers[canvas.active_layer].particles {
-		rl.DrawRectangle(i32(particle.pos.x), i32(particle.pos.y), CELL_SIZE, CELL_SIZE, particle.color)
+	for layer in canvas.layers {
+		for particle, i in layer.particles {
+			if particle.color.a != 0 {
+				rl.DrawRectangle(i32(particle.pos.x), i32(particle.pos.y), CELL_SIZE, CELL_SIZE, particle.color)
+			}
+		}
 	}
 
 	when ODIN_DEBUG {
-		// TODO: remove this after debugging is finished or set it under debug flag
 		rl.DrawRectangleV(mouse_world, {10, 10}, rl.RED)
 		rl.DrawLine(
 			i32(canvas.camera.target.x),

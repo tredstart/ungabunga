@@ -54,6 +54,7 @@ main :: proc() {
 		padding = {5, 5, 30, 5},
 	}
 
+
 	for !rl.WindowShouldClose() {
 
 		rl.BeginDrawing()
