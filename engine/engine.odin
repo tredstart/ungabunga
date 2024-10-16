@@ -131,7 +131,7 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	rl.BeginMode2D(canvas.camera)
 	defer rl.EndMode2D()
 	defer rl.EndScissorMode()
-	defer draw_brush(canvas^, canvas.brush)
+	defer draw_brush(canvas^, &canvas.brush)
 
 	rl.DrawRectangle(0, 0, canvas.canvasw * CELL_SIZE, canvas.canvash * CELL_SIZE, rl.RAYWHITE)
 
