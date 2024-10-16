@@ -12,7 +12,7 @@ CanvasState :: enum {
 Canvas :: struct {
 	panel:            rl.Rectangle,
 	camera:           rl.Camera2D,
-	current_color:    rl.Color,
+	brush:            Brush,
 	last_placed:      rl.Vector2,
 	state:            CanvasState,
 	layers:           [dynamic]Layer,
@@ -47,7 +47,7 @@ init_canvas :: proc(cw, ch: i32) -> ^Canvas {
 	vpy := VIEWPORTY * f32(window_height)
 
 	canvas.panel = {vpx, vpy, vpsw, vpsh}
-	canvas.current_color = rl.RED
+	canvas.brush.color = rl.RED
 
 	canvas.camera.zoom = 1
 	canvas.camera.target = {f32(canvas.canvasw * CELL_SIZE) / 2, f32(canvas.canvash * CELL_SIZE) / 2}
@@ -84,7 +84,7 @@ handle_zoom :: proc(canvas: ^Canvas, mouse_world: rl.Vector2, wheel: f32) {
 handle_draw :: proc(canvas: ^Canvas, mouse_world: rl.Vector2) {
 	if rl.IsMouseButtonDown(.LEFT) {
 		layer := &canvas.layers[canvas.active_layer]
-		fill := canvas.current_color
+		fill := canvas.brush.color
 		#partial switch canvas.state {
 		case .Erasing:
 			fill = {0, 0, 0, 0}
@@ -130,6 +130,7 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	rl.BeginMode2D(canvas.camera)
 	defer rl.EndMode2D()
 	defer rl.EndScissorMode()
+	defer draw_brush(canvas^, canvas.brush)
 
 	rl.DrawRectangle(0, 0, canvas.canvasw * CELL_SIZE, canvas.canvash * CELL_SIZE, rl.RAYWHITE)
 
