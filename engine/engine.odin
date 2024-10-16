@@ -48,6 +48,7 @@ init_canvas :: proc(cw, ch: i32) -> ^Canvas {
 
 	canvas.panel = {vpx, vpy, vpsw, vpsh}
 	canvas.brush.color = rl.RED
+	canvas.brush.size = 1
 
 	canvas.camera.zoom = 1
 	canvas.camera.target = {f32(canvas.canvasw * CELL_SIZE) / 2, f32(canvas.canvash * CELL_SIZE) / 2}
@@ -134,7 +135,6 @@ draw_canvas :: proc(canvas: ^Canvas) {
 
 	rl.DrawRectangle(0, 0, canvas.canvasw * CELL_SIZE, canvas.canvash * CELL_SIZE, rl.RAYWHITE)
 
-
 	wheel := rl.GetMouseWheelMove()
 	mouse_world := rl.GetScreenToWorld2D(rl.GetMousePosition(), canvas.camera)
 
@@ -152,7 +152,6 @@ draw_canvas :: proc(canvas: ^Canvas) {
 	}
 
 	when ODIN_DEBUG {
-		rl.DrawRectangleV(mouse_world, {10, 10}, rl.RED)
 		rl.DrawLine(
 			i32(canvas.camera.target.x),
 			-i32(canvas.panel.height) * 10,

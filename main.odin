@@ -53,6 +53,7 @@ main :: proc() {
 		panel   = {30, 30, 250, 900},
 		padding = {5, 5, 30, 5},
 	}
+	rl.GuiSetStyle(.SLIDER, i32(rl.GuiControlProperty.TEXT_COLOR_NORMAL), 0xffffff)
 
 
 	for !rl.WindowShouldClose() {

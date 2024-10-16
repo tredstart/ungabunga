@@ -29,6 +29,21 @@ draw_rside_panel :: proc(canvas: ^Canvas, panel: Panel) {
 	active := i32(canvas.state)
 	rl.GuiToggleGroup(rside_draw_buttons, "Draw;Erase", &active)
 	canvas.state = CanvasState(active)
+
+	vbox := rl.Rectangle {
+		x      = panel.panel.x + panel.padding.x + 50,
+		y      = rside_draw_buttons.y + 5 + rside_draw_buttons.height,
+		height = 30,
+		width  = 100,
+	}
+
+	value := f32(canvas.brush.size)
+
+	rl.GuiSlider(vbox, "1", "12", &value, 1, 12)
+	canvas.brush.size = i32(value)
+	size := strings.clone_to_cstring(fmt.tprint(canvas.brush.size))
+	defer delete(size)
+	rl.GuiLabel({vbox.x + vbox.width / 2 - 2, vbox.y + 2, 25, 25}, size)
 }
 
 draw_lside_panel :: proc(canvas: ^Canvas, panel: Panel) {
