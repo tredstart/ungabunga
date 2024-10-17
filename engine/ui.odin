@@ -28,7 +28,10 @@ draw_rside_panel :: proc(canvas: ^Canvas, panel: Panel) {
 	}
 	active := i32(canvas.state)
 	rl.GuiToggleGroup(rside_draw_buttons, "Draw;Erase", &active)
-	canvas.state = CanvasState(active)
+	if active != i32(canvas.state) {
+		canvas.state = CanvasState(active)
+		canvas.state_active = false
+	}
 
 	vbox := rl.Rectangle {
 		x      = panel.panel.x + panel.padding.x + 50,

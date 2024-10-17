@@ -85,28 +85,30 @@ handle_zoom :: proc(canvas: ^Canvas, mouse_world: rl.Vector2, wheel: f32) {
 handle_draw :: proc(canvas: ^Canvas, mouse_world: rl.Vector2) {
 	if rl.IsMouseButtonDown(.LEFT) {
 		layer := &canvas.layers[canvas.active_layer]
-		fill := canvas.brush.color
 		#partial switch canvas.state {
 		case .Erasing:
-			fill = {0, 0, 0, 0}
+			canvas.brush.color = {0, 0, 0, 0}
+            // FIXME: the color on the colorpicker drops when erasing is chosen
+		case .Drawing:
+			canvas.brush.color.a = 255
 		}
+
 		if canvas.state_active {
 			if abs(mouse_world.y - canvas.last_placed.y) < abs(mouse_world.x - canvas.last_placed.x) {
 				if canvas.last_placed.x > mouse_world.x {
-					plot_line_low(layer, mouse_world, canvas.last_placed, fill)
+					plot_line_low(layer, mouse_world, canvas.last_placed, canvas.brush)
 				} else {
-					plot_line_low(layer, canvas.last_placed, mouse_world, fill)
+					plot_line_low(layer, canvas.last_placed, mouse_world, canvas.brush)
 				}
 			} else {
 				if canvas.last_placed.y > mouse_world.y {
-					plot_line_high(layer, mouse_world, canvas.last_placed, fill)
+					plot_line_high(layer, mouse_world, canvas.last_placed, canvas.brush)
 				} else {
-					plot_line_high(layer, canvas.last_placed, mouse_world, fill)
+					plot_line_high(layer, canvas.last_placed, mouse_world, canvas.brush)
 				}
 			}
 		} else {
-
-			plot(layer, mouse_world, fill)
+			plot(layer, mouse_world, canvas.brush)
 			canvas.state_active = true
 		}
 		col, row := snap_to_grid(mouse_world)
